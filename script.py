@@ -2,6 +2,7 @@ from api import InstagramAPI
 import requests
 import json
 import time
+import sqlite3
 
 api = InstagramAPI(username='iv01020', password='qwerty123456')
 api.login()
@@ -14,7 +15,7 @@ def get_photo_id(url_list):
         try:
             profile = json.loads(profile.text)
         except:
-            print('Пользователь не найден или доступ закрыт')
+            print('Ошибка: Пользователь не найден или доступ закрыт')
             exit()
 
         pictures = profile['graphql']['user']['edge_owner_to_timeline_media']['edges']
@@ -36,10 +37,31 @@ def get_like_list_on_photo(photo_id_list):
         time.sleep(5)
     return username_list
 
+def save_usernames(username_list):
+    conn = sqlite3.connect("database.db")
+    cursor = conn.cursor()
+    try:
+        cursor.execute("CREATE TABLE Usernames (username)")
+    except:
+        print('Ошибка: Таблица существует')
+
+    for username in username_list:
+        cursor.execute("SELECT username FROM Usernames WHERE username = ?", (username,))
+        data = cursor.fetchall()
+        if len(data) == 0:
+            cursor.execute("INSERT INTO Usernames (username) VALUES (?)", (username,))
+        else:
+            print('Ошибка: Имя существует')
+
+    conn.commit()
+    conn.close()
+
 def main():
-    url_list = ['https://www.instagram.com/olesgonchar/']
+    url_list = ['https://www.instagram.com/gretvim/']
 
     photo_list = get_photo_id(url_list)
     username_list = get_like_list_on_photo(photo_list)
+    save_usernames(username_list)
+
 
 main()
