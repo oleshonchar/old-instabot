@@ -7,7 +7,7 @@ api = InstagramAPI(username='iv01020', password='qwerty123456')
 api.login()
 
 def get_photo_id(url_list):
-    id_list = []
+    photo_list = []
     for url in url_list:
         profile = requests.get(url + '?__a=1')
 
@@ -19,8 +19,27 @@ def get_photo_id(url_list):
 
         pictures = profile['graphql']['user']['edge_owner_to_timeline_media']['edges']
         for picture in pictures:
-            id_list.append(int(picture['node']['id']))
+            photo_list.append(int(picture['node']['id']))
         time.sleep(5)
-    return id_list
+    return photo_list
 
-print(get_photo_id(['https://www.instagram.com/olesgonchar/', 'https://www.instagram.com/dr._.marcus/', 'https://www.instagram.com/masha_polosukhina/']))
+def get_like_list_on_photo(photo_id_list):
+    username_list = []
+    for photo_id in photo_id_list:
+        api.getMediaLikers(photo_id)
+        users_list = api.LastJson
+        users_list = users_list['users']
+        for user in users_list:
+            username = user['username']
+            if username not in username_list:
+                username_list.append(username)
+        time.sleep(5)
+    return username_list
+
+def main():
+    url_list = ['https://www.instagram.com/olesgonchar/']
+
+    photo_list = get_photo_id(url_list)
+    username_list = get_like_list_on_photo(photo_list)
+
+main()
