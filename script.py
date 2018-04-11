@@ -3,6 +3,7 @@ import requests
 import json
 import time
 import sqlite3
+import random
 
 api = InstagramAPI(username='iv01020', password='qwerty123456')
 api.login()
@@ -56,12 +57,47 @@ def save_usernames(username_list):
     conn.commit()
     conn.close()
 
-def main():
-    url_list = ['https://www.instagram.com/gretvim/']
+def put_like(number_of_users):
+    conn = sqlite3.connect("database.db")
+    cursor = conn.cursor()
+    # try:
+    #     # cursor.execute("CREATE TABLE Usernames_marked (username)")
+    #     # cursor.execute("CREATE TABLE Usernames_without_a_marked (username)")
+    # except:
+    #     print('Ошибка: Таблица существует')
 
-    photo_list = get_photo_id(url_list)
-    username_list = get_like_list_on_photo(photo_list)
-    save_usernames(username_list)
+    cursor.execute("SELECT * FROM Usernames WHERE ROWID < ?", (number_of_users,))
+    username_list = cursor.fetchall()
+
+    for username in username_list:
+        profile = ['https://www.instagram.com/' + username[0] + '/']
+        photo_list = get_photo_id(profile)
+        count = 0
+        while count < 2:
+            try:
+                random_post_id = photo_list[random.randint(0, (len(photo_list) - 1))]
+                print(str(username[0]) + ' ::::: палец вверх')
+                api.like(random_post_id)
+                cursor.execute("INSERT INTO Usernames_marked (username) VALUES (?)", (username[0],))
+                time.sleep(5)
+            except:
+                print(str(username[0]) + ' ::::: ' + 'профиль закрыт или записи отсутствуют')
+                cursor.execute("INSERT INTO Usernames_without_a_marked (username) VALUES (?)", (username[0],))
+                count = 2
+            cursor.execute("DELETE FROM Usernames WHERE username = ?", (username[0],))
+            count += 1
+        time.sleep(10)
+
+    conn.commit()
+    conn.close()
+
+def main():
+    url_list = ['https://www.instagram.com/yurchiikk/']
+
+    # photo_list = get_photo_id(url_list)
+    # username_list = get_like_list_on_photo(photo_list)
+    # save_usernames(username_list)
+    put_like(5)
 
 
 main()
