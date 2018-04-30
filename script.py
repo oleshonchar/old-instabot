@@ -1,5 +1,4 @@
 from api import InstagramAPI
-import json
 import time
 import sqlite3
 import random
@@ -161,7 +160,7 @@ def follow(number_of_users):
             error += 1
             continue
 
-    print("Подписка завершена! Новых подписок: {}, неудачных подписок: {}".format(done, error))
+    return("Подписка завершена! Новых подписок: {}, неудачных подписок: {}".format(done, error))
 
 
 def unfollow(number_of_users):
@@ -192,39 +191,22 @@ def liking():
         time.sleep(7200)
         counter += 1
 
-def following_day():
-    counter = 0
-
+def check_for_emptiness_db():
     cursor.execute("SELECT COUNT(*) FROM Usernames WHERE follow ISNULL")
     amount_items = cursor.fetchone()[0]
 
     if amount_items > 800:
-
-        while counter < 4:
-            put_like(1)
-            time.sleep(7200)
-            follow(100)
-            time.sleep(7200)
-            counter += 1
+        return False
 
     else:
-        print('Ошибка: Недостаточное количество записей в базе данных')
+        return('Ошибка: Недостаточное количество записей в базе данных')
 
 def unfollowing_day():
     counter = 0
 
     while counter < 4:
-        put_like(200)
+        put_like(100)
         time.sleep(7200)
-        unfollow(150)
+        unfollow(75)
         time.sleep(7200)
         counter += 1
-
-def main():
-
-    username_list = []
-    # parse_users(username_list)
-    # following_day()
-
-
-main()
