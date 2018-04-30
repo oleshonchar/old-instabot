@@ -1,3 +1,10 @@
+decorator==4.2.1
+imageio==2.3.0
+moviepy==0.2.2.11
+numpy==1.14.2
+Pillow==5.1.0
+pyTelegramBotAPI==3.6.2
 requests==2.11.1
 requests-toolbelt==0.7.0
-moviepy==0.2.2.11
+six==1.11.0
+tqdm==4.21.0

@@ -8,8 +8,12 @@ import config
 api = InstagramAPI(config.username, config.password)
 api.login()
 
-conn = sqlite3.connect("database.db")
+conn = sqlite3.connect("database.db", check_same_thread=False)
 cursor = conn.cursor()
+
+def close_db():
+    conn.commit()
+    conn.close()
 
 def get_user_id(username_list):
     user_id_list = []
@@ -90,6 +94,8 @@ def save_usernames(username_list):
 def put_like(number_of_users):
     cursor.execute("SELECT username FROM Usernames WHERE like ISNULL LIMIT ?", (number_of_users,))
     username_list = cursor.fetchall()
+    done = 0
+    error = 0
 
     for username in username_list:
         photo_list = get_photo_id(get_user_id(username))
@@ -100,6 +106,7 @@ def put_like(number_of_users):
             if photo_list == False or not photo_list:
                 print(str(username[0]) + ' ::::: ' + 'профиль закрыт или записи отсутствуют')
                 cursor.execute("UPDATE Usernames SET like = 'not liked' WHERE username = ?", (username[0],))
+                error += 1
                 count = 2
 
             else:
@@ -107,13 +114,37 @@ def put_like(number_of_users):
                 api.like(random_post_id)
                 print(str(username[0]) + ' ::::: палец вверх')
                 cursor.execute("UPDATE Usernames SET like = 'liked' WHERE username = ?", (username[0],))
+                done += 1
                 time.sleep(15)
 
             count += 1
 
+    return 'Лайкинг завершен! Новых лайков: {}, неудачных лайков: {}'.format(done, error)
+
+def liking_feed():
+    api.timelineFeed()
+    media_id_list = api.LastJson['items']
+    done = 0
+    print('Лайкинг ленты запущен')
+
+    for media_id in media_id_list:
+
+        try:
+            media_id = media_id['pk']
+            api.like(media_id)
+            done += 1
+
+        except KeyError:
+            pass
+
+    print('Лайкинг ленты завершен! Новых лайков: {}'.format(done))
+
+
 def follow(number_of_users):
     cursor.execute("SELECT username FROM Usernames WHERE follow ISNULL LIMIT ?", (number_of_users,))
     username_list = cursor.fetchall()
+    done = 0
+    error = 0
 
     for username in username_list:
         user_id = get_user_id(username)
@@ -122,22 +153,30 @@ def follow(number_of_users):
             api.follow(get_user_id(username)[0])
             print(str(username[0]) + ' ::::: ' + 'подписался')
             cursor.execute("UPDATE Usernames SET follow = 'follow' WHERE username = ?", (username[0],))
+            done += 1
             time.sleep(35)
 
         else:
             cursor.execute("UPDATE Usernames SET follow = 'error' WHERE username = ?", (username[0],))
+            error += 1
             continue
+
+    print("Подписка завершена! Новых подписок: {}, неудачных подписок: {}".format(done, error))
 
 
 def unfollow(number_of_users):
     cursor.execute("SELECT username FROM Usernames WHERE follow == 'follow' LIMIT ?", (number_of_users,))
     username_list = cursor.fetchall()
+    done = 0
 
     for username in username_list:
         api.unfollow(get_user_id(username)[0])
         print(str(username[0]) + ' ::::: ' + 'отписался')
         cursor.execute("UPDATE Usernames SET follow = 'unfollow' WHERE username = ?", (username[0],))
+        done += 1
         time.sleep(21)
+
+    print("Отписка завершена! Отписок: {}".format(done))
 
 def parse_users(username_list):
     user_id_list = get_user_id(username_list)
@@ -189,6 +228,3 @@ def main():
 
 
 main()
-
-conn.commit()
-conn.close()
