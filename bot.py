@@ -4,6 +4,7 @@ from telebot import types
 import time
 import config
 import script
+import datetime
 
 
 
@@ -13,7 +14,7 @@ bot = telebot.TeleBot(config.token)
 
 bot.remove_webhook()
 time.sleep(1)
-bot.set_webhook(url="https://b7230518.ngrok.io/{}".format(config.token))
+bot.set_webhook(url="https://87ab7bd5.ngrok.io/{}".format(config.token))
 
 app = flask.Flask(__name__)
 
@@ -26,84 +27,13 @@ def index():
 
 @app.route('/{}'.format(config.token), methods=['POST'])
 def webhook():
-    if flask.request.headers.get('content-type') == 'application/json': #todo: разобраться что это
+    if flask.request.headers.get('content-type') == 'application/json': #todo: разобраться c этим блоком
         json_string = flask.request.get_data().decode('utf-8')
         update = telebot.types.Update.de_json(json_string)
         bot.process_new_updates([update])
         return ''
     else:
         flask.abort(403)
-
-
-@bot.message_handler(commands=['parseusers'])
-def start_parse_users(message):
-    # username_list = []
-    # bot.send_message(message.chat.id, 'Начинаем сбор пользователей')
-    # bot.send_message(message.chat.id, 'Введите id профиля с интересующей вас аудиторией подписчиков')
-    # script.parse_users(username_list)
-    # todo: 	дописать получение юзернеймов из чата
-    pass
-
-
-@bot.message_handler(commands=['like'])
-def start_liking(message):
-    start_liking._reset = False
-    bot.send_message(message.chat.id, 'Поехали! Лайкаееем')
-    bot.send_message(message.chat.id, 'Процесс запущен, результат будет через 1 час')
-
-    counter = 0
-
-    while counter < 4 and start_liking._reset is not True:
-        msg = script.put_like(25)
-        bot.send_message(message.chat.id, 'Завершена {} итерация. Активность заморожена на 2 часа, по истечению времени программа будет запущена автоматически'.format(counter))
-        counter += 1
-        bot.send_message(message.chat.id, '{} - остаток итераций'.format(3 - counter))
-
-        if start_liking._reset is not True:
-            time.sleep(7200)
-
-    bot.send_message(message.chat.id, msg)
-    script.close_db()
-    return
-
-
-@bot.message_handler(commands=['followday'])
-def start_following_day(message):
-    start_following_day._reset = False
-    bot.send_message(message.chat.id, 'Поехали! Подписываемся')
-    bot.send_message(message.chat.id, 'Процесс запущен, результат будет через 1 час')
-
-    counter = 0
-    check = script.check_for_emptiness_db()
-
-    if check is False:
-
-        while counter < 4 and start_following_day._reset is not True:
-            msg_about_liking = script.put_like(100)
-            bot.send_message(message.chat.id, msg_about_liking)
-            bot.send_message(message.chat.id, 'Выставлены лайки по {} итерации. Активность заморожена на 2 часа, по истечению времени программа будет запущена автоматически'.format(counter))
-
-            if start_following_day._reset is not True:
-                time.sleep(7200)
-
-            msg_about_following = script.follow(100)
-            bot.send_message(message.chat.id, msg_about_following)
-            bot.send_message(message.chat.id, 'Подписались по {} итерации. Активность заморожена на 2 часа, по истечению времени программа будет запущена автоматически'.format(counter))
-
-            if start_following_day._reset is not True:
-                time.sleep(7200)
-
-            counter += 1
-            bot.send_message(message.chat.id, '{} - остаток итераций'.format(3 - counter))
-
-    else:
-        bot.send_message(message.chat.id, check)
-
-
-@bot.message_handler(commands=['reset'])
-def reset(message):
-    start_liking._reset = True
-    bot.send_message(message.chat.id, 'Работа остановлена, ожидайте завершения текущего процесса')
 
 
 @bot.message_handler(commands=['start', 'help'])
@@ -115,6 +45,133 @@ def startCommand(message):
 def message(message):
     pass
     #todo: дописать ответ на текстовые сообщения
+
+
+@bot.message_handler(commands=['following', 'liking', 'unfollowing'])
+def before_start(message):
+
+    name_of_mode = {'following': 'Лайкинг+фоловинг',
+                    'like': 'Лайкинг',
+                    'unfollowing' : 'Лайкинг+отписка'
+                    }
+    markup = types.InlineKeyboardMarkup(row_width=2)
+    accept = types.InlineKeyboardButton(text="Продолжить", callback_data=message.text[1:] + "_accept")
+    decline = types.InlineKeyboardButton(text="Отменить", callback_data=message.text[1:] +"_decline")
+    markup.add(accept, decline)
+    bot.send_message(message.chat.id,
+                     'Вы активируете режим "{}"\n\n'
+                     '<b>Осторожно! Процесс может длится до 24 часов</b>\n'
+                     'в процессе вы будете получать уведомления'.format(name_of_mode[message.text[1:]]),
+                     reply_markup=markup,
+                     parse_mode="HTML",
+                    )
+
+
+def get_time(seconds):
+    return datetime.datetime.strptime(time.ctime(time.time() + seconds), "%a %b %d %H:%M:%S %Y").strftime("%H:%M:%S")
+
+
+def start_parse_users(message):
+    # todo: получение юзернеймов из чата
+    pass
+
+
+def liking(message):
+    counter = 0
+
+    while counter < 4:
+        bot.send_message(message.chat.id,
+                         'Начинаем лайкинг!\n\n'
+                         'Итерация закончиться в: {}\n'
+                         '<b>Осторожно! Не используйте аккаунт instagram до следующей паузы</b>'.format(get_time(3600)),
+                         parse_mode="HTML",
+                        )
+        msg = script.put_like(100)
+        script.conn.commit()
+        bot.send_message(message.chat.id,
+                         'Завершена {} итерация\n'
+                         '<i>{} - остаток итераций</i>\n\n'
+                         'Следующая итерация начнется в {}\n'
+                         'На время паузы допускается использование аккаунта'.format((counter + 1),
+                                                                                    (4 - (counter + 1)),
+                                                                                    get_time(7200)),
+                         parse_mode="HTML",
+                        )
+        bot.send_message(message.chat.id, '<b>' + msg + '</b>', parse_mode="HTML")
+        counter += 1
+        time.sleep(7200)
+
+    script.conn.close()
+    bot.send_message(message.chat.id, 'Лайкинг завершен!\n\nМожете запускать новый процесс')
+
+
+def automode(message, mode='following'):
+    counter = 1
+    check = script.check_for_emptiness_db()
+    follow_or_unfollow = 'фолловинг'
+
+    if mode == 'unfollowing':
+        follow_or_unfollow = 'отписку'
+
+    if check is False:
+
+        while counter < 9:
+            bot.send_message(message.chat.id,
+                             'Начинаем {}!\n\n'
+                             'Итерация закончиться в: {}\n'
+                             '<b>Осторожно! Не используйте аккаунт instagram до следующей паузы</b>'.format(
+                                 'лайкинг' if counter % 2 == 1 else follow_or_unfollow,
+                                 get_time(3600)),
+                             parse_mode="HTML",
+                             )
+            if mode == 'unfollowing':
+                msg = script.put_like(100) if counter % 2 == 1 else script.unfollow(150)
+            else:
+                msg = script.put_like(100) if counter % 2 == 1 else script.follow(100)
+            script.conn.commit()
+            bot.send_message(message.chat.id,
+                             'Завершена {} итерация\n'
+                             '<i>{} - остаток итераций</i>\n\n'
+                             'Следующая итерация начнется в {}\n'
+                             'На время паузы допускается использование аккаунта'.format(counter,
+                                                                                        (8 - counter),
+                                                                                        get_time(7200)),
+                             parse_mode="HTML",
+                             )
+            bot.send_message(message.chat.id, '<b>' + msg + '</b>', parse_mode="HTML")
+            time.sleep(7200)
+            counter += 1
+
+        script.conn.close()
+        bot.send_message(message.chat.id, 'Лайкинг+{} завершен!\n\nМожете запускать новый процесс'.format(follow_or_unfollow))
+
+    else:
+        bot.send_message(message.chat.id, check)
+
+
+@bot.callback_query_handler(func=lambda call: True)
+def callback_inline(call):
+
+    if call.message:
+
+        if call.data == "following_decline":
+            bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text='Режим "Лайкинг+фоловинг" отменен')
+        elif call.data == "following_accept":
+            bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text='Режим "Лайкинг+фоловинг" запущен')
+            automode(call.message, mode='following')
+
+        if call.data == "like_decline":
+            bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text='Режим "Лайкинг" отменен')
+        elif call.data == "like_accept":
+            bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text='Режим "Лайкинг" запущен')
+            liking(call.message)
+
+        if call.data == "unfollowing_decline":
+            bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text='Режим "Лайкинг+отписка" отменен')
+        elif call.data == "unfollowing_accept":
+            bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text='Режим "Лайкинг+отписка" запущен')
+            automode(call.message, mode='unfollowing')
+
 
 
 if __name__ == '__main__':

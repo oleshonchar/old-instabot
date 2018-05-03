@@ -10,9 +10,6 @@ api.login()
 conn = sqlite3.connect("database.db", check_same_thread=False)
 cursor = conn.cursor()
 
-def close_db():
-    conn.commit()
-    conn.close()
 
 def get_user_id(username_list):
     user_id_list = []
@@ -118,7 +115,7 @@ def put_like(number_of_users):
 
             count += 1
 
-    return 'Лайкинг завершен! Новых лайков: {}, неудачных лайков: {}'.format(done, error)
+    return 'Новых лайков: {}, неудачных лайков: {}'.format(done, error)
 
 def liking_feed():
     api.timelineFeed()
@@ -160,7 +157,7 @@ def follow(number_of_users):
             error += 1
             continue
 
-    return("Подписка завершена! Новых подписок: {}, неудачных подписок: {}".format(done, error))
+    return("Новых подписок: {}, неудачных подписок: {}".format(done, error))
 
 
 def unfollow(number_of_users):
@@ -175,7 +172,7 @@ def unfollow(number_of_users):
         done += 1
         time.sleep(21)
 
-    print("Отписка завершена! Отписок: {}".format(done))
+    return("Отписок: {}".format(done))
 
 def parse_users(username_list):
     user_id_list = get_user_id(username_list)
