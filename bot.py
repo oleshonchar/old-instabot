@@ -11,10 +11,11 @@ import datetime
 # logger = telebot.logger #todo: разобраться что это
 # telebot.logger.setLevel(logging.INFO) #todo: разобраться что это
 bot = telebot.TeleBot(config.token)
+url = input('Введите url: ')
 
 bot.remove_webhook()
 time.sleep(1)
-bot.set_webhook(url="https://87ab7bd5.ngrok.io/{}".format(config.token))
+bot.set_webhook(url="{}{}".format(url, config.token))
 
 app = flask.Flask(__name__)
 
@@ -41,12 +42,6 @@ def startCommand(message):
     bot.send_message(message.chat.id, 'Hi *' + message.chat.first_name + '*!' , parse_mode='Markdown', reply_markup=types.ReplyKeyboardRemove())
 
 
-@bot.message_handler(func=lambda message: True, content_types=['text'])
-def message(message):
-    pass
-    #todo: дописать ответ на текстовые сообщения
-
-
 @bot.message_handler(commands=['following', 'liking', 'unfollowing'])
 def before_start(message):
 
@@ -65,6 +60,41 @@ def before_start(message):
                      reply_markup=markup,
                      parse_mode="HTML",
                     )
+
+@bot.message_handler(commands=['followingonly'])
+def following_only(message):
+    counter = 0
+
+    while counter < 4:
+        bot.send_message(message.chat.id,
+                         'Начинаем фоловинг!\n\n'
+                         'Итерация закончиться в: {}\n'
+                         '<b>Осторожно! Не используйте аккаунт instagram до следующей паузы</b>'.format(get_time(3600)),
+                         parse_mode="HTML",
+                        )
+        msg = script.follow(100)
+        script.conn.commit()
+        bot.send_message(message.chat.id,
+                         'Завершена {} итерация\n'
+                         '<i>{} - остаток итераций</i>\n\n'
+                         'Следующая итерация начнется в {}\n'
+                         'На время паузы допускается использование аккаунта'.format((counter + 1),
+                                                                                    (4 - (counter + 1)),
+                                                                                    get_time(7200)),
+                         parse_mode="HTML",
+                        )
+        bot.send_message(message.chat.id, '<b>' + msg + '</b>', parse_mode="HTML")
+        counter += 1
+        time.sleep(7200)
+
+    script.conn.close()
+
+
+
+@bot.message_handler(func=lambda message: True, content_types=['text'])
+def message(message):
+    pass
+    #todo: дописать ответ на текстовые сообщения
 
 
 def get_time(seconds):
@@ -115,7 +145,7 @@ def automode(message, mode='following'):
 
     if check is False:
 
-        while counter < 9:
+        while counter < 5:
             bot.send_message(message.chat.id,
                              'Начинаем {}!\n\n'
                              'Итерация закончиться в: {}\n'
@@ -134,7 +164,7 @@ def automode(message, mode='following'):
                              '<i>{} - остаток итераций</i>\n\n'
                              'Следующая итерация начнется в {}\n'
                              'На время паузы допускается использование аккаунта'.format(counter,
-                                                                                        (8 - counter),
+                                                                                        (4 - counter),
                                                                                         get_time(7200)),
                              parse_mode="HTML",
                              )
