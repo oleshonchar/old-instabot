@@ -1,5 +1,10 @@
+click==6.7
 decorator==4.2.1
+Flask==1.0.1
 imageio==2.3.0
+itsdangerous==0.24
+Jinja2==2.10
+MarkupSafe==1.0
 moviepy==0.2.2.11
 numpy==1.14.2
 Pillow==5.1.0
@@ -8,3 +13,4 @@ requests==2.11.1
 requests-toolbelt==0.7.0
 six==1.11.0
 tqdm==4.21.0
+Werkzeug==0.14.1

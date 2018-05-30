@@ -37,13 +37,43 @@ def webhook():
         flask.abort(403)
 
 
-@bot.message_handler(commands=['start', 'help'])
+@bot.message_handler(commands=['start'])
 def startCommand(message):
-    bot.send_message(message.chat.id, 'Hi *' + message.chat.first_name + '*!' , parse_mode='Markdown', reply_markup=types.ReplyKeyboardRemove())
+    keyboard = types.ReplyKeyboardMarkup(row_width=1, resize_keyboard=True, one_time_keyboard=True)
+    button_phone = types.KeyboardButton(text='Войти', request_contact=True)
+    keyboard.add(button_phone)
+    bot.send_message(message.chat.id, 'Для авторизации необходимо отправить ваши контактные данные', reply_markup=keyboard)
 
 
-@bot.message_handler(commands=['following', 'liking', 'unfollowing'])
+@bot.message_handler(content_types=['contact'])
+def read_contact_data(message):
+    user_id = message.contact.user_id
+    msg = script.check_registration(user_id)
+
+    markup = types.InlineKeyboardMarkup(row_width=2)
+    accept = types.InlineKeyboardButton(text="Зарегистрироваться", callback_data="registration_accept")
+    decline = types.InlineKeyboardButton(text="Отменить", callback_data="registration_decline")
+
+    if msg['key'] == False:
+        markup.add(accept, decline)
+
+    bot.send_message(message.chat.id, '{} {}, {}'.format(message.contact.first_name, message.contact.last_name, msg['text']), reply_markup=markup)
+
+
+@bot.message_handler(commands=['parse'])
+def parseUsers(message):
+
+    script.auth(message.chat.id)
+
+    list = ['alexeyshirshin', 'lacostus']
+    script.parse_users(list, message.chat.id)
+    print('Сбор ЦА завершен!')
+
+
+@bot.message_handler(commands=['following', 'like', 'unfollowing'])
 def before_start(message):
+
+    script.auth(message.chat.id)
 
     name_of_mode = {'following': 'Лайкинг+фоловинг',
                     'like': 'Лайкинг',
@@ -63,6 +93,9 @@ def before_start(message):
 
 @bot.message_handler(commands=['followingonly'])
 def following_only(message):
+
+    script.auth(message.chat.id)
+
     counter = 0
 
     while counter < 4:
@@ -72,7 +105,7 @@ def following_only(message):
                          '<b>Осторожно! Не используйте аккаунт instagram до следующей паузы</b>'.format(get_time(3600)),
                          parse_mode="HTML",
                         )
-        msg = script.follow(100)
+        msg = script.follow(100, message.chat.id)
         script.conn.commit()
         bot.send_message(message.chat.id,
                          'Завершена {} итерация\n'
@@ -90,20 +123,26 @@ def following_only(message):
     script.conn.close()
 
 
-
 @bot.message_handler(func=lambda message: True, content_types=['text'])
 def message(message):
-    pass
-    #todo: дописать ответ на текстовые сообщения
+    if message.text.startswith('login:') or message.text.startswith('password:'):
+        key = message.text.split(':')[0]
+        value = message.text.split(':')[1].replace(' ', '')
+        user_id = message.from_user.id
+
+        if script.check_registration(user_id)['key']:
+
+            if len(value) == 0:
+                bot.send_message(message.chat.id, 'Ошибка ввода!')
+            else:
+                if script.check_instagram_data(user_id):
+                    msg = script.registration_instagram_data(user_id, key, value)
+                    bot.send_message(message.chat.id, msg)
+
 
 
 def get_time(seconds):
     return datetime.datetime.strptime(time.ctime(time.time() + seconds), "%a %b %d %H:%M:%S %Y").strftime("%H:%M:%S")
-
-
-def start_parse_users(message):
-    # todo: получение юзернеймов из чата
-    pass
 
 
 def liking(message):
@@ -116,7 +155,7 @@ def liking(message):
                          '<b>Осторожно! Не используйте аккаунт instagram до следующей паузы</b>'.format(get_time(3600)),
                          parse_mode="HTML",
                         )
-        msg = script.put_like(100)
+        msg = script.put_like(100, message.chat.id)
         script.conn.commit()
         bot.send_message(message.chat.id,
                          'Завершена {} итерация\n'
@@ -137,7 +176,7 @@ def liking(message):
 
 def automode(message, mode='following'):
     counter = 1
-    check = script.check_for_emptiness_db()
+    check = script.check_for_emptiness_db(message.chat.id)
     follow_or_unfollow = 'фолловинг'
 
     if mode == 'unfollowing':
@@ -155,9 +194,9 @@ def automode(message, mode='following'):
                              parse_mode="HTML",
                              )
             if mode == 'unfollowing':
-                msg = script.put_like(100) if counter % 2 == 1 else script.unfollow(150)
+                msg = script.put_like(100, message.chat.id) if counter % 2 == 1 else script.unfollow(150, message.chat.id)
             else:
-                msg = script.put_like(100) if counter % 2 == 1 else script.follow(100)
+                msg = script.put_like(100, message.chat.id) if counter % 2 == 1 else script.follow(100, message.chat.id)
             script.conn.commit()
             bot.send_message(message.chat.id,
                              'Завершена {} итерация\n'
@@ -172,11 +211,24 @@ def automode(message, mode='following'):
             time.sleep(7200)
             counter += 1
 
-        script.conn.close()
+        # script.conn.close()
         bot.send_message(message.chat.id, 'Лайкинг+{} завершен!\n\nМожете запускать новый процесс'.format(follow_or_unfollow))
 
     else:
         bot.send_message(message.chat.id, check)
+
+
+def instagram_login(message):
+    keyboard = types.ReplyKeyboardRemove()
+    bot.send_message(message.chat.id,
+                     '<b>Введите логин и пароль от аккаунта instagram</b>\n'
+                     'в следующем формате:\n\n'
+                     '<i>login: ваш логин</i>\n'
+                     '<i>password: ваш пароль</i>',
+                     parse_mode="HTML",
+                     reply_markup=keyboard
+                     )
+
 
 
 @bot.callback_query_handler(func=lambda call: True)
@@ -202,7 +254,12 @@ def callback_inline(call):
             bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text='Режим "Лайкинг+отписка" запущен')
             automode(call.message, mode='unfollowing')
 
-
+        if call.data == "registration_accept":
+            msg = script.registration_user(call.from_user.id)
+            bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text='{}'.format(msg))
+            instagram_login(call.message)
+        elif call.data == "registration_decline":
+            bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text='Регистрация отменена!')
 
 if __name__ == '__main__':
     app.run(debug=True, use_reloader=False)
