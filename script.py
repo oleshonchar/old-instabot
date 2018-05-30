@@ -230,7 +230,12 @@ def check_for_emptiness_db(user_id):
 
 
 def check_registration(user_id):
-    cursor.execute("SELECT userid FROM Instagram WHERE userid = ?", (user_id,))
+    try:
+        cursor.execute("SELECT userid FROM Instagram WHERE userid = ?", (user_id,))
+
+    except:
+        cursor.execute("CREATE TABLE Instagram (userid, login, password)")
+
     data = cursor.fetchall()
 
     if len(data) == 0:
