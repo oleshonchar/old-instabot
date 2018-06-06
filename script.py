@@ -271,3 +271,18 @@ def registration_instagram_data(user_id, key, value):
 
     conn.commit()
     return ('Ваш {} добавлен!'.format(key))
+
+
+def get_and_save_following_list(user_id):
+    cursor.execute("SELECT login FROM Instagram WHERE userid = ?", (user_id,))
+    selfid = cursor.fetchall()[0]
+    selfid = get_user_id(selfid)
+    followers = api.getTotalFollowings(selfid[0])
+
+    try:
+        cursor.execute("CREATE TABLE Whitelist (userid, username)")
+    except:
+        print('Ошибка: Таблица существует')
+
+    for i in followers:
+        cursor.execute("INSERT INTO Whitelist (userid, username) VALUES (?, ?)", (user_id, i['username']))

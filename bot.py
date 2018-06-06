@@ -7,7 +7,6 @@ import script
 import datetime
 
 
-
 # logger = telebot.logger #todo: разобраться что это
 # telebot.logger.setLevel(logging.INFO) #todo: разобраться что это
 bot = telebot.TeleBot(config.token)
@@ -18,7 +17,6 @@ time.sleep(1)
 bot.set_webhook(url="{}{}".format(url, config.token))
 
 app = flask.Flask(__name__)
-
 
 
 @app.route('/', methods=['GET', 'HEAD'])
@@ -91,6 +89,7 @@ def before_start(message):
                      parse_mode="HTML",
                     )
 
+
 @bot.message_handler(commands=['followingonly'])
 def following_only(message):
 
@@ -123,6 +122,15 @@ def following_only(message):
     script.conn.close()
 
 
+@bot.message_handler(commands=['whitelist'])
+def save_whitelist(message):
+
+    script.auth(message.chat.id)
+    script.get_and_save_following_list(message.chat.id)
+    bot.send_message(message.chat.id, 'White list создан!')
+    script.conn.commit()
+
+
 @bot.message_handler(func=lambda message: True, content_types=['text'])
 def message(message):
     if message.text.startswith('login:') or message.text.startswith('password:'):
@@ -138,7 +146,6 @@ def message(message):
                 if script.check_instagram_data(user_id):
                     msg = script.registration_instagram_data(user_id, key, value)
                     bot.send_message(message.chat.id, msg)
-
 
 
 def get_time(seconds):
@@ -230,7 +237,6 @@ def instagram_login(message):
                      )
 
 
-
 @bot.callback_query_handler(func=lambda call: True)
 def callback_inline(call):
 
@@ -260,6 +266,7 @@ def callback_inline(call):
             instagram_login(call.message)
         elif call.data == "registration_decline":
             bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text='Регистрация отменена!')
+
 
 if __name__ == '__main__':
     app.run(debug=True, use_reloader=False)
