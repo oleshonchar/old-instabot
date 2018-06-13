@@ -83,12 +83,32 @@ def get_like_list_on_photo(photo_id_list):
         for user in users_list:
             username = user['username']
 
-            if username not in username_list:
-                username_list.append(username)
+            print(username)
+            if check_subscribers_count(username):
+                if username not in username_list:
+                    username_list.append(username)
+            else:
+                continue
 
         time.sleep(5)
 
     return username_list
+
+
+def check_subscribers_count(user_name):
+    api.searchUsername(user_name)
+    try:
+        total = api.LastJson['user']['follower_count']
+    except KeyError:
+        print('Доступ закрыт или профиль не найден')
+        return False
+
+    print(total)
+
+    if total < 500:
+        return True
+    else:
+        return False
 
 
 def save_usernames(username_list, user_id):

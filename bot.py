@@ -7,8 +7,6 @@ import script
 import datetime
 
 
-# logger = telebot.logger #todo: разобраться что это
-# telebot.logger.setLevel(logging.INFO) #todo: разобраться что это
 bot = telebot.TeleBot(config.token)
 url = input('Введите url: ')
 
