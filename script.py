@@ -83,14 +83,16 @@ def get_like_list_on_photo(photo_id_list):
         for user in users_list:
             username = user['username']
 
-            print(username)
-            if check_subscribers_count(username):
-                if username not in username_list:
+            print(len(username_list), username, '\n')
+            if username not in username_list and check_subscribers_count(username):
+                if len(username_list) < 2000:
                     username_list.append(username)
+                else:
+                    return username_list
             else:
                 continue
 
-        time.sleep(5)
+        time.sleep(1)
 
     return username_list
 
@@ -102,8 +104,8 @@ def check_subscribers_count(user_name):
     except KeyError:
         print('Доступ закрыт или профиль не найден')
         return False
-
-    print(total)
+    finally:
+        time.sleep(0.5)
 
     if total < 500:
         return True
