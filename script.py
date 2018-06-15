@@ -91,7 +91,7 @@ def get_like_list_on_photo(photo_id_list):
             else:
                 continue
 
-        time.sleep(1)
+        time.sleep(1.5)
 
     return username_list
 
@@ -104,7 +104,7 @@ def check_subscribers_count(user_name):
         print('Доступ закрыт или профиль не найден')
         return False
     finally:
-        time.sleep(0.5)
+        time.sleep(1)
 
     if total < 500:
         return True
@@ -290,7 +290,7 @@ def check_instagram_data(user_id):
     cursor.execute("SELECT password FROM Instagram WHERE userid = ?", (user_id,))
     data_password = cursor.fetchall()
 
-    if len(data_login) == 0 and len(data_password) == 0:
+    if len(data_login) == 0 and len(check_subscribers_countdata_password) == 0:
         return {'key': False, 'text': 'вы не зарегистрированы'}
     else:
         return {'key': True, 'text': 'вы зарегистрированы'}
