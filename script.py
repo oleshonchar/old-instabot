@@ -2,7 +2,6 @@ from api import InstagramAPI
 import time
 import sqlite3
 import random
-import config
 
 
 conn = sqlite3.connect("database.db", check_same_thread=False)
@@ -55,7 +54,7 @@ def get_photo_id(user_id_list):
         for user_id in user_id_list:
             user_feed = api.getUserFeed(user_id)
 
-            if user_feed == False:
+            if not user_feed:
                 print('Ошибка: Пользователь не найден или доступ закрыт')
                 return False
 
@@ -134,8 +133,13 @@ def save_usernames(username_list, user_id):
     conn.commit()
 
 
-def put_like(number_of_users, user_id):
-    cursor.execute("SELECT username FROM Usernames WHERE like ISNULL AND userid = ? LIMIT ?", (user_id, number_of_users))
+def put_like(number_of_users, user_id, old_profile=False):
+    if old_profile:
+        cursor.execute("SELECT username FROM Usernames WHERE follow = 'follow' AND userid = ? LIMIT ?",
+                       (user_id, number_of_users))
+    else:
+        cursor.execute("SELECT username FROM Usernames WHERE like ISNULL AND userid = ? LIMIT ?",
+                       (user_id, number_of_users))
     username_list = cursor.fetchall()
     done = 0
     error = 0
@@ -146,9 +150,10 @@ def put_like(number_of_users, user_id):
 
         while count < 2:
 
-            if photo_list == False or not photo_list:
+            if not photo_list:
                 print(str(username[0]) + ' ::::: ' + 'профиль закрыт или записи отсутствуют')
-                cursor.execute("UPDATE Usernames SET like = 'not liked' WHERE username = ? AND userid = ?", (username[0], user_id))
+                cursor.execute("UPDATE Usernames SET like = 'not liked' WHERE username = ? AND userid = ?",
+                               (username[0], user_id))
                 error += 1
                 count = 2
 
@@ -156,7 +161,8 @@ def put_like(number_of_users, user_id):
                 random_post_id = photo_list[random.randint(0, (len(photo_list) - 1))]
                 api.like(random_post_id)
                 print(str(username[0]) + ' ::::: палец вверх')
-                cursor.execute("UPDATE Usernames SET like = 'liked' WHERE username = ? AND userid = ?", (username[0], user_id))
+                cursor.execute("UPDATE Usernames SET like = 'liked' WHERE username = ? AND userid = ?",
+                               (username[0], user_id))
                 done += 1
                 time.sleep(15)
 
@@ -185,7 +191,8 @@ def liking_feed():
 
 
 def follow(number_of_users, user_id):
-    cursor.execute("SELECT username FROM Usernames WHERE follow ISNULL AND userid = ? LIMIT ?", (user_id, number_of_users,))
+    cursor.execute("SELECT username FROM Usernames WHERE follow ISNULL AND userid = ? LIMIT ?",
+                   (user_id, number_of_users,))
     username_list = cursor.fetchall()
     done = 0
     error = 0
@@ -196,20 +203,23 @@ def follow(number_of_users, user_id):
         if userid:
             api.follow(get_user_id(username)[0])
             print(str(username[0]) + ' ::::: ' + 'подписался')
-            cursor.execute("UPDATE Usernames SET follow = 'follow' WHERE username = ? AND userid = ?", (username[0], user_id,))
+            cursor.execute("UPDATE Usernames SET follow = 'follow' WHERE username = ? AND userid = ?",
+                           (username[0], user_id,))
             done += 1
             time.sleep(35)
 
         else:
-            cursor.execute("UPDATE Usernames SET follow = 'error' WHERE username = ? AND userid = ?", (username[0], user_id,))
+            cursor.execute("UPDATE Usernames SET follow = 'error' WHERE username = ? AND userid = ?",
+                           (username[0], user_id,))
             error += 1
             continue
 
-    return("Новых подписок: {}, неудачных подписок: {}".format(done, error))
+    return "Новых подписок: {}, неудачных подписок: {}".format(done, error)
 
 
 def unfollow(number_of_users, user_id):
-    cursor.execute("SELECT username FROM Usernames WHERE follow == 'follow' AND userid = ? LIMIT ?", (user_id, number_of_users,))
+    cursor.execute("SELECT username FROM Usernames WHERE follow == 'follow' AND userid = ? LIMIT ?",
+                   (user_id, number_of_users,))
     username_list = cursor.fetchall()
     done = 0
     error = 0
@@ -220,16 +230,18 @@ def unfollow(number_of_users, user_id):
         if userid:
             api.unfollow(get_user_id(username)[0])
             print(str(username[0]) + ' ::::: ' + 'отписался')
-            cursor.execute("UPDATE Usernames SET follow = 'unfollow' WHERE username = ? AND userid = ?", (username[0], user_id))
+            cursor.execute("UPDATE Usernames SET follow = 'unfollow' WHERE username = ? AND userid = ?",
+                           (username[0], user_id))
             done += 1
             time.sleep(21)
 
         else:
-            cursor.execute("UPDATE Usernames SET follow = 'error' WHERE username = ? AND userid = ?", (username[0], user_id,))
+            cursor.execute("UPDATE Usernames SET follow = 'error' WHERE username = ? AND userid = ?",
+                           (username[0], user_id,))
             error += 1
             continue
 
-    return("Отписок: {}".format(done))
+    return "Отписок: {}".format(done)
 
 
 def parse_users(username_list, user_id):
@@ -248,7 +260,7 @@ def check_for_emptiness_db(user_id):
         return False
 
     else:
-        return('Ошибка: Недостаточное количество записей в базе данных')
+        return 'Ошибка: Недостаточное количество записей в базе данных'
 
 
 def check_registration(user_id):
@@ -292,7 +304,7 @@ def registration_instagram_data(user_id, key, value):
         cursor.execute("UPDATE Instagram SET password = (?) WHERE userid = (?)", (value, user_id))
 
     conn.commit()
-    return ('Ваш {} добавлен!'.format(key))
+    return 'Ваш {} добавлен!'.format(key)
 
 
 def get_and_save_following_list(user_id):

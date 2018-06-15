@@ -24,7 +24,7 @@ def index():
 
 @app.route('/{}'.format(config.token), methods=['POST'])
 def webhook():
-    if flask.request.headers.get('content-type') == 'application/json': #todo: разобраться c этим блоком
+    if flask.request.headers.get('content-type') == 'application/json':
         json_string = flask.request.get_data().decode('utf-8')
         update = telebot.types.Update.de_json(json_string)
         bot.process_new_updates([update])
@@ -34,11 +34,12 @@ def webhook():
 
 
 @bot.message_handler(commands=['start'])
-def startCommand(message):
+def start(message):
     keyboard = types.ReplyKeyboardMarkup(row_width=1, resize_keyboard=True, one_time_keyboard=True)
     button_phone = types.KeyboardButton(text='Войти', request_contact=True)
     keyboard.add(button_phone)
-    bot.send_message(message.chat.id, 'Для авторизации необходимо отправить ваши контактные данные', reply_markup=keyboard)
+    bot.send_message(message.chat.id, 'Для авторизации необходимо отправить ваши контактные данные',
+                     reply_markup=keyboard)
 
 
 @bot.message_handler(content_types=['contact'])
@@ -50,14 +51,15 @@ def read_contact_data(message):
     accept = types.InlineKeyboardButton(text="Зарегистрироваться", callback_data="registration_accept")
     decline = types.InlineKeyboardButton(text="Отменить", callback_data="registration_decline")
 
-    if msg['key'] == False:
+    if not msg['key']:
         markup.add(accept, decline)
 
-    bot.send_message(message.chat.id, '{} {}, {}'.format(message.contact.first_name, message.contact.last_name, msg['text']), reply_markup=markup)
+    bot.send_message(message.chat.id, '{} {}, {}'.format(message.contact.first_name, message.contact.last_name,
+                                                         msg['text']), reply_markup=markup)
 
 
 @bot.message_handler(commands=['parse'])
-def parseUsers(message):
+def parse(message):
 
     script.auth(message.chat.id)
 
@@ -199,7 +201,8 @@ def automode(message, mode='following'):
                              parse_mode="HTML",
                              )
             if mode == 'unfollowing':
-                msg = script.put_like(100, message.chat.id) if counter % 2 == 1 else script.unfollow(150, message.chat.id)
+                msg = script.put_like(100, message.chat.id, old_profile=True) if counter % 2 == 1 else \
+                    script.unfollow(150, message.chat.id)
             else:
                 msg = script.put_like(100, message.chat.id) if counter % 2 == 1 else script.follow(100, message.chat.id)
             script.conn.commit()
@@ -217,7 +220,8 @@ def automode(message, mode='following'):
             counter += 1
 
         # script.conn.close()
-        bot.send_message(message.chat.id, 'Лайкинг+{} завершен!\n\nМожете запускать новый процесс'.format(follow_or_unfollow))
+        bot.send_message(message.chat.id, 'Лайкинг+{} завершен!\n\nМожете запускать новый процесс'
+                         .format(follow_or_unfollow))
 
     else:
         bot.send_message(message.chat.id, check)
@@ -241,29 +245,37 @@ def callback_inline(call):
     if call.message:
 
         if call.data == "following_decline":
-            bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text='Режим "Лайкинг+фоловинг" отменен')
+            bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
+                                  text='Режим "Лайкинг+фоловинг" отменен')
         elif call.data == "following_accept":
-            bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text='Режим "Лайкинг+фоловинг" запущен')
+            bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
+                                  text='Режим "Лайкинг+фоловинг" запущен')
             automode(call.message, mode='following')
 
         if call.data == "like_decline":
-            bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text='Режим "Лайкинг" отменен')
+            bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
+                                  text='Режим "Лайкинг" отменен')
         elif call.data == "like_accept":
-            bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text='Режим "Лайкинг" запущен')
+            bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
+                                  text='Режим "Лайкинг" запущен')
             liking(call.message)
 
         if call.data == "unfollowing_decline":
-            bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text='Режим "Лайкинг+отписка" отменен')
+            bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
+                                  text='Режим "Лайкинг+отписка" отменен')
         elif call.data == "unfollowing_accept":
-            bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text='Режим "Лайкинг+отписка" запущен')
+            bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
+                                  text='Режим "Лайкинг+отписка" запущен')
             automode(call.message, mode='unfollowing')
 
         if call.data == "registration_accept":
             msg = script.registration_user(call.from_user.id)
-            bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text='{}'.format(msg))
+            bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
+                                  text='{}'.format(msg))
             instagram_login(call.message)
         elif call.data == "registration_decline":
-            bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text='Регистрация отменена!')
+            bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
+                                  text='Регистрация отменена!')
 
 
 if __name__ == '__main__':
